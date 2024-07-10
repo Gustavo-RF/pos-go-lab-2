@@ -15,7 +15,7 @@ func GetWeather(local string, requestFunc RequestFunc, weatherApiKey string) (en
 		return entities.WeatherResponse{}, err
 	}
 
-	weatherResponse := entities.NewWeatherResponse(weatherApiResponse.Current.TempC)
+	weatherResponse := entities.NewWeatherResponse(local, weatherApiResponse.Current.TempC)
 	return weatherResponse, nil
 }
 

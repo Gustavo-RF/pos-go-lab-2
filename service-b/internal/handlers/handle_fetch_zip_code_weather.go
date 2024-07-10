@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Gustavo-RF/pos-go-lab-2/service-b/internal/web"
@@ -39,5 +40,6 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, weatherA
 	}
 
 	res.Header().Set("Content-type", "application/json")
+	fmt.Println("Response: %v", weather)
 	json.NewEncoder(res).Encode(weather)
 }
