@@ -2,109 +2,88 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"flag"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
-	"time"
+	"os"
+	"os/signal"
 
-	"github.com/paemuri/brdoc"
+	"github.com/Gustavo-RF/pos-go-lab-2/service-a/handlers"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-type Request struct {
-	Cep string `json:"cep"`
-}
+var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 
-type Response struct {
-	Message string `json:"message"`
-}
+// initTracer creates a new trace provider instance and registers it as global trace provider.
+func initTracer(url string) (func(context.Context) error, error) {
+	// Create Zipkin Exporter and install it as a global tracer.
+	//
+	// For demoing purposes, always sample. In a production application, you should
+	// configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased) set at the desired
+	// ratio.
+	exporter, err := zipkin.New(
+		url,
+		zipkin.WithLogger(logger),
+	)
+	if err != nil {
+		return nil, err
+	}
 
-type WeatherResponse struct {
-	City  string  `json:"city"`
-	TempC float32 `json:"temp_c"`
-	TempF float32 `json:"temp_f"`
-	TempK float32 `json:"temp_k"`
+	batcher := sdktrace.NewBatchSpanProcessor(exporter)
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(batcher),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("zipkin-test"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return tp.Shutdown, nil
 }
 
 func main() {
+	url := flag.String("zipkin", "http://localhost:9411/api/v2/spans", "zipkin url")
+	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	shutdown, err := initTracer(*url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
+		}
+	}()
+
+	tr := otel.GetTracerProvider().Tracer("component-main")
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var request Request
-		err := json.NewDecoder(r.Body).Decode(&request)
-
-		if err != nil {
-			w.WriteHeader(http.StatusBadGateway)
-			response := Response{
-				Message: "Error while fetch zip code data",
-			}
-			json.NewEncoder(w).Encode(response)
-			return
-		}
-
-		validate(w, request.Cep)
-
-		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://localhost:8081?cep=%s", request.Cep), nil)
-
-		if err != nil {
-			panic(err)
-		}
-
-		req.Header.Set("Accepts", "application/json")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			panic(err)
-		}
-
-		defer resp.Body.Close()
-
-		res, err := io.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		var data WeatherResponse
-		err = json.Unmarshal(res, &data)
-
-		if err != nil {
-			panic(err)
-		}
-
-		json.NewEncoder(w).Encode(data)
+		handlers.Handler(w, r, tr, ctx)
 	})
 
-	fmt.Println("Server started at 8080")
-	http.ListenAndServe(":8080", nil)
-}
+	srvErr := make(chan error, 1)
+	go func() {
+		fmt.Println("Server started at 8080")
+		srvErr <- http.ListenAndServe(":8080", nil)
+	}()
 
-func validate(res http.ResponseWriter, cep string) {
-	if cep == "" {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		response := Response{
-			Message: "Cep is required",
-		}
-		json.NewEncoder(res).Encode(response)
+	select {
+	case <-srvErr:
+		// Error when starting HTTP server.
 		return
-	}
-
-	if len(cep) != 8 {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		response := Response{
-			Message: "Invalid zipcode",
-		}
-		json.NewEncoder(res).Encode(response)
-		return
-	}
-
-	if !brdoc.IsCEP(cep) {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		response := Response{
-			Message: "Invalid zipcode",
-		}
-		json.NewEncoder(res).Encode(response)
-		return
+	case <-ctx.Done():
+		// Wait for first CTRL+C.
+		// Stop receiving signal notifications as soon as possible.
+		cancel()
 	}
 }
