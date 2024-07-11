@@ -34,9 +34,10 @@ type WeatherResponse struct {
 	TempK float32 `json:"temp_k"`
 }
 
-func Handler(w http.ResponseWriter, r *http.Request, tr trace.Tracer, ctx context.Context) {
+func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context.Context) {
 
-	ctx, span := tr.Start(ctx, "check-cep", trace.WithSpanKind(trace.SpanKindServer))
+	// ctx, span := tr.Start(ctx, "check-cep")
+	ctx, span := t.Start(ctx, "zipcode")
 
 	var request Request
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -59,7 +60,7 @@ func Handler(w http.ResponseWriter, r *http.Request, tr trace.Tracer, ctx contex
 	defer cancel()
 
 	out, err := json.Marshal(WeatherRequest{
-		Tr:  tr,
+		Tr:  t,
 		Cep: request.Cep,
 	})
 
@@ -72,7 +73,7 @@ func Handler(w http.ResponseWriter, r *http.Request, tr trace.Tracer, ctx contex
 		return
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "http://localhost:8081", bytes.NewBuffer(out))
+	req, err := http.NewRequestWithContext(ctx, "POST", "http://host.docker.internal:8081", bytes.NewBuffer(out))
 
 	if err != nil {
 		panic(err)

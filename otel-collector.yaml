@@ -3,6 +3,9 @@
 
 receivers:
   otlp:
+    protocols:
+      grpc:
+      http:
 
 processors:
   batch:
@@ -11,21 +14,12 @@ extensions:
   health_check: {}
 
 exporters:
-  otlp:
-    endpoint:  zipkin-collector:9411
-    tls:
-      insecure: true
+  zipkin:
+    endpoint: zipkin-collector:9411
   debug:
 
 service:
-  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp, debug]
-
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [debug]
+      exporters: [zipkin]

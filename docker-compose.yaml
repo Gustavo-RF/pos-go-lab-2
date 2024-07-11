@@ -8,5 +8,31 @@ services:
       - "9411:9411"
     networks:
       - example
+
+  otelcol:
+    image: otel/opentelemetry-collector:latest
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - 4317:4317
+      - 55679:55679
+
+  service-a:
+    build: ./service-a
+    ports:
+      - 8080:8080
+    networks:
+      - example
+
+  service-b:
+    build: ./service-b
+    environment:
+      - DOTENV_PATH=.env
+    ports:
+      - 8081:8081
+    networks:
+      - example
 networks:
   example:
+    driver: bridge

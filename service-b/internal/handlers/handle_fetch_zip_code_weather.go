@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"service-b/internal/web"
+	"service-b/weather"
+	zipcode "service-b/zip-code"
 
-	"github.com/Gustavo-RF/pos-go-lab-2/service-b/internal/web"
-	"github.com/Gustavo-RF/pos-go-lab-2/service-b/weather"
-	zipcode "github.com/Gustavo-RF/pos-go-lab-2/service-b/zip-code"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -22,11 +22,18 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, weatherApiKey string) {
+func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, t trace.Tracer, weatherApiKey string) {
+
+	carrier := propagation.HeaderCarrier(req.Header)
+	ctx := req.Context()
+	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
 
 	var request Request
 	err := json.NewDecoder(req.Body).Decode(&request)
-	fmt.Printf("Chegou aqui 111: %v", req.Body)
+
+	// tr := otel.GetTracerProvider().Tracer("component-main-2")
+	ctx, span := t.Start(ctx, "check-cep-2")
+	defer span.End()
 
 	if err != nil {
 		fmt.Printf("Chegou aqui err not nil: %s", err.Error())
@@ -37,14 +44,6 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, weatherA
 		json.NewEncoder(res).Encode(response)
 		return
 	}
-
-	fmt.Printf("Chegou aqui 1:")
-	carrier := propagation.HeaderCarrier(req.Header)
-	ctx := req.Context()
-	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
-	fmt.Printf("Chegou aqui:")
-	ctx, span := request.Tr.Start(ctx, "check-cep-2", trace.WithSpanKind(trace.SpanKindServer))
-	defer span.End()
 
 	cepFind, err := zipcode.GetZipCodeWithContext(ctx, request.Cep, web.RequestWithContext)
 

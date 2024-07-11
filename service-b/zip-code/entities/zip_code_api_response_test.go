@@ -1,9 +1,9 @@
 package entities
 
 import (
+	"service-b/internal/web"
 	"testing"
 
-	"github.com/Gustavo-RF/pos-go-lab-2/service-b/internal/web"
 	"github.com/stretchr/testify/assert"
 )
 

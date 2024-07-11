@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/Gustavo-RF/pos-go-lab-2/service-b/zip-code/entities"
+	"service-b/zip-code/entities"
 )
 
 type RequestFunc func(url, method string) ([]byte, error)

@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-
-	"github.com/Gustavo-RF/pos-go-lab-2/service-b/weather/entities"
+	"service-b/weather/entities"
 )
 
 type RequestFunc func(url, method string) ([]byte, error)
