@@ -8,6 +8,7 @@ import (
 	"service-b/weather"
 	zipcode "service-b/zip-code"
 
+	"github.com/openzipkin/zipkin-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -31,8 +32,9 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, t trace.
 	var request Request
 	err := json.NewDecoder(req.Body).Decode(&request)
 
-	// tr := otel.GetTracerProvider().Tracer("component-main-2")
-	ctx, span := t.Start(ctx, "check-cep-2")
+	// ctx, span := t.Start(ctx, "check-cep")
+	span := zipkin.SpanFromContext(req.Context())
+	// ctx = zipkin.NewContext(newRequest.Context(), span)
 	defer span.End()
 
 	if err != nil {

@@ -36,8 +36,8 @@ type WeatherResponse struct {
 
 func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context.Context) {
 
-	// ctx, span := tr.Start(ctx, "check-cep")
-	ctx, span := t.Start(ctx, "zipcode")
+	ctx, span := t.Start(ctx, "check-cep")
+	defer span.End()
 
 	var request Request
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -101,8 +101,6 @@ func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context
 	if err != nil {
 		panic(err)
 	}
-
-	span.End()
 
 	json.NewEncoder(w).Encode(data)
 }
