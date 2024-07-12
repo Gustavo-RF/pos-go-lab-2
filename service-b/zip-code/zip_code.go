@@ -28,7 +28,7 @@ func GetZipCode(zipcode string, requestFunc RequestFunc) (*entities.ZipCodeRespo
 
 func GetZipCodeWithContext(ctx context.Context, zipcode string, requestFunc RequestWithContextFunc, tracer trace.Tracer, req *http.Request) (*entities.ZipCodeResponse, error) {
 
-	ctx, span := tracer.Start(req.Context(), "Service B - Zip code - Start Tracer")
+	ctx, span := tracer.Start(req.Context(), "Zip code - Start Tracer")
 	defer span.End()
 
 	zipCodeApiResponse, err := fetchWitchContext(ctx, zipcode, requestFunc)

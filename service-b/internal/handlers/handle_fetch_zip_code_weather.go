@@ -35,7 +35,7 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
 
-	ctx, span := tracer.Start(req.Context(), "Service B - Start Tracer")
+	ctx, span := tracer.Start(req.Context(), "Start Tracer")
 	defer span.End()
 
 	var request Request
@@ -53,9 +53,10 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 	cepFind, err := zipcode.GetZipCodeWithContext(ctx, request.Cep, web.RequestWithContext, tracer, req)
 
 	if err != nil {
+		fmt.Println("Error while get zip code: " + err.Error())
 		res.WriteHeader(http.StatusNotFound)
 		response := Response{
-			Message: err.Error(),
+			Message: "Error while get zip code: " + err.Error(),
 		}
 		json.NewEncoder(res).Encode(response)
 		return
@@ -71,6 +72,7 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("Called weather\n")
 
 	if err != nil {
+		fmt.Println("Error while get weather: " + err.Error())
 		res.WriteHeader(http.StatusBadGateway)
 		response := Response{
 			Message: "Error while get weather: " + err.Error(),

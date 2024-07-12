@@ -25,7 +25,7 @@ func GetWeather(local string, requestFunc RequestFunc, weatherApiKey string) (en
 
 func GetWeatherWithContext(ctx context.Context, local string, requestFunc RequestWithContextFunc, weatherApiKey string, tracer trace.Tracer, req *http.Request) (entities.WeatherResponse, error) {
 
-	ctx, span := tracer.Start(req.Context(), "Service B - Weather - Start Tracer")
+	ctx, span := tracer.Start(req.Context(), "Weather - Start Tracer")
 	defer span.End()
 
 	weatherApiResponse, err := fetchWithContext(ctx, local, requestFunc, weatherApiKey)

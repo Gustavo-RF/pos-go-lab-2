@@ -41,7 +41,7 @@ var (
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 
-	ctx, span := tracer.Start(r.Context(), "Service A - Start Tracer")
+	ctx, span := tracer.Start(r.Context(), "Start Tracer")
 	defer span.End()
 
 	var request Request
