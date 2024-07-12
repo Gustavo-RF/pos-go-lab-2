@@ -4,38 +4,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"service-b/configs"
 	"service-b/internal/web"
 	"service-b/weather"
 	zipcode "service-b/zip-code"
 
-	"github.com/openzipkin/zipkin-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Request struct {
-	Tr  trace.Tracer `json:"tr"`
-	Cep string       `json:"cep"`
+	Cep string `json:"cep"`
 }
 
 type Response struct {
 	Message string `json:"message"`
 }
 
-func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, t trace.Tracer, weatherApiKey string) {
+const name = "check-cep"
+
+var (
+	tracer = otel.Tracer(name)
+)
+
+func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
+	configs, err := configs.LoadConfig(".")
+	if err != nil {
+		panic(err)
+	}
 
 	carrier := propagation.HeaderCarrier(req.Header)
 	ctx := req.Context()
 	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
 
-	var request Request
-	err := json.NewDecoder(req.Body).Decode(&request)
-
-	// ctx, span := t.Start(ctx, "check-cep")
-	span := zipkin.SpanFromContext(req.Context())
-	// ctx = zipkin.NewContext(newRequest.Context(), span)
+	ctx, span := tracer.Start(req.Context(), "check-cep")
 	defer span.End()
+
+	var request Request
+	err = json.NewDecoder(req.Body).Decode(&request)
 
 	if err != nil {
 		fmt.Printf("Chegou aqui err not nil: %s", err.Error())
@@ -58,7 +64,7 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request, t trace.
 		return
 	}
 
-	weather, err := weather.GetWeatherWithContext(ctx, cepFind.Localidade, web.RequestWithContext, weatherApiKey)
+	weather, err := weather.GetWeatherWithContext(ctx, cepFind.Localidade, web.RequestWithContext, configs.WeatherApiKey)
 
 	if err != nil {
 		res.WriteHeader(http.StatusBadGateway)

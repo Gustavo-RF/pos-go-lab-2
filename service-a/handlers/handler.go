@@ -11,7 +11,6 @@ import (
 	"github.com/paemuri/brdoc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Request struct {
@@ -23,8 +22,7 @@ type Response struct {
 }
 
 type WeatherRequest struct {
-	Tr  trace.Tracer `json:"tr"`
-	Cep string       `json:"cep"`
+	Cep string `json:"cep"`
 }
 
 type WeatherResponse struct {
@@ -34,9 +32,15 @@ type WeatherResponse struct {
 	TempK float32 `json:"temp_k"`
 }
 
-func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context.Context) {
+const name = "check-cep"
 
-	ctx, span := t.Start(ctx, "check-cep")
+var (
+	tracer = otel.Tracer(name)
+)
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+
+	ctx, span := tracer.Start(r.Context(), "check-cep")
 	defer span.End()
 
 	var request Request
@@ -60,7 +64,6 @@ func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context
 	defer cancel()
 
 	out, err := json.Marshal(WeatherRequest{
-		Tr:  t,
 		Cep: request.Cep,
 	})
 
@@ -81,7 +84,7 @@ func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context
 
 	req.Header.Set("Accepts", "application/json")
 
-	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
