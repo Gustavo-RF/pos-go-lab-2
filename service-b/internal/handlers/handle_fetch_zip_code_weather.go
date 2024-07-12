@@ -23,7 +23,7 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-const name = "check-cep-2"
+const name = "Service B - Tracer"
 
 var (
 	tracer = otel.Tracer(name)
@@ -35,14 +35,13 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
 
-	ctx, span := tracer.Start(req.Context(), "check-cep-2")
+	ctx, span := tracer.Start(req.Context(), "Service B - Start Tracer")
 	defer span.End()
 
 	var request Request
 	err := json.NewDecoder(req.Body).Decode(&request)
 
 	if err != nil {
-		fmt.Printf("Chegou aqui err not nil: %s", err.Error())
 		res.WriteHeader(http.StatusBadGateway)
 		response := Response{
 			Message: "Error while fetch data: " + err.Error(),
@@ -50,8 +49,8 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(response)
 		return
 	}
-	fmt.Printf("Chegou aqui antes: %s\n", request.Cep)
-	cepFind, err := zipcode.GetZipCodeWithContext(ctx, request.Cep, web.RequestWithContext)
+
+	cepFind, err := zipcode.GetZipCodeWithContext(ctx, request.Cep, web.RequestWithContext, tracer, req)
 
 	if err != nil {
 		res.WriteHeader(http.StatusNotFound)
@@ -67,8 +66,9 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	fmt.Printf("Chegou aqui antes 2: %s\n", configs.WeatherApiKey)
-	weather, err := weather.GetWeatherWithContext(ctx, cepFind.Localidade, web.RequestWithContext, configs.WeatherApiKey)
+	fmt.Printf("Call weather\n")
+	weather, err := weather.GetWeatherWithContext(ctx, cepFind.Localidade, web.RequestWithContext, configs.WeatherApiKey, tracer, req)
+	fmt.Printf("Called weather\n")
 
 	if err != nil {
 		res.WriteHeader(http.StatusBadGateway)
@@ -76,11 +76,13 @@ func HandleFetchZipCodeTemp(res http.ResponseWriter, req *http.Request) {
 			Message: "Error while get weather: " + err.Error(),
 		}
 		json.NewEncoder(res).Encode(response)
+		fmt.Printf("response: %v", response)
 		return
 	}
 
 	res.Header().Set("Content-type", "application/json")
 	fmt.Println(weather)
 	json.NewEncoder(res).Encode(weather)
+	fmt.Printf("Before end\n")
 	return
 }

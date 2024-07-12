@@ -33,7 +33,7 @@ type WeatherResponse struct {
 	TempK float32 `json:"temp_k"`
 }
 
-const name = "check-cep"
+const name = "Service A - Tracer"
 
 var (
 	tracer = otel.Tracer(name)
@@ -41,7 +41,7 @@ var (
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 
-	ctx, span := tracer.Start(r.Context(), "check-cep")
+	ctx, span := tracer.Start(r.Context(), "Service A - Start Tracer")
 	defer span.End()
 
 	var request Request
@@ -60,7 +60,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
@@ -77,10 +76,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	time.Sleep(time.Second * 1)
+	fmt.Println("Call service b..")
 	req, err := http.NewRequestWithContext(ctx, "POST", "http://host.docker.internal:8081", bytes.NewBuffer(out))
 
 	if err != nil {
-		fmt.Println("error 1: " + err.Error())
 		return
 	}
 
@@ -91,6 +91,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := http.DefaultClient.Do(req)
+	fmt.Println("Called service b..")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -100,7 +101,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	res, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("error 3: " + err.Error())
 		return
 	}
 
@@ -108,10 +108,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(res, &data)
 
 	if err != nil {
-		fmt.Println("error 4: " + err.Error())
 		return
 	}
 
+	time.Sleep(time.Second * 1)
 	json.NewEncoder(w).Encode(data)
 }
 

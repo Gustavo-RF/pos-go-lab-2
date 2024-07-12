@@ -3,8 +3,11 @@ package weather
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"service-b/weather/entities"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 type RequestFunc func(url, method string) ([]byte, error)
@@ -20,7 +23,11 @@ func GetWeather(local string, requestFunc RequestFunc, weatherApiKey string) (en
 	return weatherResponse, nil
 }
 
-func GetWeatherWithContext(ctx context.Context, local string, requestFunc RequestWithContextFunc, weatherApiKey string) (entities.WeatherResponse, error) {
+func GetWeatherWithContext(ctx context.Context, local string, requestFunc RequestWithContextFunc, weatherApiKey string, tracer trace.Tracer, req *http.Request) (entities.WeatherResponse, error) {
+
+	ctx, span := tracer.Start(req.Context(), "Service B - Weather - Start Tracer")
+	defer span.End()
+
 	weatherApiResponse, err := fetchWithContext(ctx, local, requestFunc, weatherApiKey)
 	if err != nil {
 		return entities.WeatherResponse{}, err
