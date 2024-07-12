@@ -38,6 +38,7 @@ func RequestWithContext(ctx context.Context, url, method string) ([]byte, error)
 	}
 
 	req.Header.Set("Accept", "application/json")
+	req.Close = true
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

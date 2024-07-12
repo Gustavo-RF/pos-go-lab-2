@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/paemuri/brdoc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Request struct {
@@ -23,8 +23,7 @@ type Response struct {
 }
 
 type WeatherRequest struct {
-	Tr  trace.Tracer `json:"tr"`
-	Cep string       `json:"cep"`
+	Cep string `json:"cep"`
 }
 
 type WeatherResponse struct {
@@ -34,9 +33,15 @@ type WeatherResponse struct {
 	TempK float32 `json:"temp_k"`
 }
 
-func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context.Context) {
+const name = "check-cep"
 
-	ctx, span := t.Start(ctx, "check-cep")
+var (
+	tracer = otel.Tracer(name)
+)
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+
+	ctx, span := tracer.Start(r.Context(), "check-cep")
 	defer span.End()
 
 	var request Request
@@ -60,7 +65,6 @@ func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context
 	defer cancel()
 
 	out, err := json.Marshal(WeatherRequest{
-		Tr:  t,
 		Cep: request.Cep,
 	})
 
@@ -76,30 +80,36 @@ func Handler(w http.ResponseWriter, r *http.Request, t trace.Tracer, ctx context
 	req, err := http.NewRequestWithContext(ctx, "POST", "http://host.docker.internal:8081", bytes.NewBuffer(out))
 
 	if err != nil {
-		panic(err)
+		fmt.Println("error 1: " + err.Error())
+		return
 	}
 
 	req.Header.Set("Accepts", "application/json")
 
-	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
+	req.Close = true
+
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	defer resp.Body.Close()
 
 	res, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		fmt.Println("error 3: " + err.Error())
+		return
 	}
 
 	var data WeatherResponse
 	err = json.Unmarshal(res, &data)
 
 	if err != nil {
-		panic(err)
+		fmt.Println("error 4: " + err.Error())
+		return
 	}
 
 	json.NewEncoder(w).Encode(data)
