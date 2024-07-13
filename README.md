@@ -51,6 +51,8 @@ http://localhost:9411
 
 Assim que a requisição for feita, clique em ```Run Query``` para listar os traces.
 
+![image](https://github.com/user-attachments/assets/adc22259-6ef2-43b9-bf81-6aa295086755)
+
 ### Observação
 Um tempo de 1 segundo foi acrescido ao inicio e ao fim da execução para melhor visualização dos traces
 
