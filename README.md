@@ -15,36 +15,60 @@ Teremos dois serviços:
     "temp_k": float32
   }
   ```
-  
+## Zipkin
+O zipkin é um sistema de tracing distribuido. Ele será responsável pela visualização do trace total desde a requisição do
+cliente até as chamadas de cep e temperatura.
 
-O objetivo desse laboratório é retornar as temperaturas de uma localidade buscada pelo cep. Além disso, o deploy será feito pelo google cloud run.
-Para buscar o CEP, utilizarei a api do viacep, retornando a localidade desse cep. Com essa localidade, utilizarei a api weather api para buscar
-a temperatura em celsius e calcular a temperatura em fahrenheit e kelvin.
+# Testando
+Para testar, execute o comando docker compose
+```
+docker compose up -d --build
+```
+Após isso, estará disponível na porta 8080 localmente o endereço para teste.
+No terminal, execute um cUrl:
+```
+ curl --request POST \                                          
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+        "cep": "cep_valido"
+}'
+```
+Essa chamada passará todo o processo descrito acima e retornará a resposta:
+  ```
+  {
+    "city": string,
+    "temp_c": float32,
+    "temp_f": float32,
+    "temp_k": float32
+  }
+  ```
 
-A resposta será um objeto com as propriedades
-```
-{
-  "temp_c": float32,
-  "temp_f": float32,
-  "temp_k": float32
-}
-```
+## Visualizando Trace
+Para visualizar o Trace pelo zipkin, acesse:
 
-## Endereço disponível
-https://lab1-cloudrun-q4sscskaha-rj.a.run.app/
+http://localhost:9411
 
-Para resposta, envie como query a propriedade cep:
-```
-?cep=cep_somente_numeros
-```
+Assim que a requisição for feita, clique em ```Run Query``` para listar os traces.
+
+### Observação
+Um tempo de 1 segundo foi acrescido ao inicio e ao fim da execução para melhor visualização dos traces
 
 ### Exemplo
 Requisição com sucesso:
-https://lab1-cloudrun-q4sscskaha-rj.a.run.app?cep=29092260
+```
+ curl --request POST \                                          
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+        "cep": "29092260"
+}'
+```
 
 Resposta
 ```
 {
+  "city": "Vitória",
   "temp_c": 26.3,
   "temp_f": 79.34,
   "temp_k": 299.3
@@ -52,7 +76,14 @@ Resposta
 ```
 
 Caso envie um cep que não seja válido:
-https://lab1-cloudrun-q4sscskaha-rj.a.run.app?cep=asdf
+```
+ curl --request POST \                                          
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+        "cep": "asdf"
+}'
+```
 
 Resposta
 ```
@@ -62,7 +93,14 @@ Resposta
 ```
 
 Caso envie um cep que não exista:
-https://lab1-cloudrun-q4sscskaha-rj.a.run.app?cep=12312312
+```
+ curl --request POST \                                          
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+        "cep": "12312312"
+}'
+```
 
 Resposta
 ```
@@ -72,7 +110,13 @@ Resposta
 ```
 
 Caso não envie um cep:
-https://lab1-cloudrun-q4sscskaha-rj.a.run.app
+```
+ curl --request POST \                                          
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+  }'
+```
 
 Resposta
 ```
@@ -81,21 +125,7 @@ Resposta
 }
 ```
 
-## Testes locais
-No terminal, digite:
-```
-cp .env.example .env
-```
-Caso necessário, altere a variável ```WEATHER_API_KEY``` para a sua key do weather api.
-
-Para testar, utilize o docker compose:
-```
-docker compose up -d --build
-```
-
-Acesse localhost:8080 para executar as chamadas.
-
 ### Testes unitários
 ```
-go test ./...
+go test ./... 
 ```
