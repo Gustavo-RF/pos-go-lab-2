@@ -92,8 +92,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.DefaultClient.Do(req)
 	fmt.Println("Called service b..")
+
 	if err != nil {
-		fmt.Println(err)
+		w.WriteHeader(http.StatusBadGateway)
+		response := Response{
+			Message: "Error while fetch zip code data: " + err.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
@@ -101,6 +106,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	res, err := io.ReadAll(resp.Body)
 	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		response := Response{
+			Message: "Error while fetch zip code data: " + err.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
@@ -108,6 +118,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(res, &data)
 
 	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		response := Response{
+			Message: "Error while fetch zip code data: " + err.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
