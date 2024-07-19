@@ -4,8 +4,9 @@ services:
     ports:
       - "9411:9411"
     networks:
-      - example
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   otelcol:
     image: otel/opentelemetry-collector:latest
@@ -15,14 +16,17 @@ services:
     ports:
       - 4317:4317
       - 55679:55679
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   service-a:
     build: ./service-a
     ports:
       - 8080:8080
     networks:
-      - example
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   service-b:
     build: ./service-b
@@ -30,11 +34,13 @@ services:
       - DOTENV_PATH=.env
     ports:
       - 8081:8081
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
-      - example
       - default
     extra_hosts:
       - "host.docker.internal:host-gateway"
 networks:
-  example:
+  default:
     driver: bridge
