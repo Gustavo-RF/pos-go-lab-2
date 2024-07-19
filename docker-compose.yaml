@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   zipkin-collector:
     image: openzipkin/zipkin-slim:latest
@@ -6,6 +5,7 @@ services:
       - "9411:9411"
     networks:
       - example
+      - default
 
   otelcol:
     image: otel/opentelemetry-collector:latest
@@ -22,6 +22,7 @@ services:
       - 8080:8080
     networks:
       - example
+      - default
 
   service-b:
     build: ./service-b
@@ -31,6 +32,9 @@ services:
       - 8081:8081
     networks:
       - example
+      - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 networks:
   example:
     driver: bridge
