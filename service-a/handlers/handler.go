@@ -102,6 +102,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if resp.StatusCode == 404 {
+		w.WriteHeader(http.StatusNotFound)
+		response := Response{
+			Message: "Can not find zipcode",
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	defer resp.Body.Close()
 
 	res, err := io.ReadAll(resp.Body)
